@@ -21,14 +21,20 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Install Google Chrome 137
+    - name: Install Google Chrome stable via apt
       run: |
-        wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_137.0.6926.99-1_amd64.deb
-        sudo dpkg -i google-chrome-stable_137.0.6926.99-1_amd64.deb || sudo apt-get install -f -y
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
 
-    - name: Install matching ChromeDriver 137.0.6963.41
+    - name: Install ChromeDriver matching installed Chrome version
       run: |
-        wget -N https://chromedriver.storage.googleapis.com/137.0.6963.41/chromedriver_linux64.zip
+        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+        echo "Chrome version detected: $CHROME_VERSION"
+        CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+        echo "Matching ChromeDriver version: $CHROMEDRIVER_VERSION"
+        wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
         unzip chromedriver_linux64.zip
         sudo mv chromedriver /usr/local/bin/
         sudo chmod +x /usr/local/bin/chromedriver
