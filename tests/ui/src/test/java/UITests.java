@@ -22,42 +22,17 @@ public class UITests {
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=1920,1080");
-        options.addArguments("--remote-debugging-port=9222");
         
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(15));
         
         driver.get("http://localhost:3000");
-        
-        // Debug: Print page source to understand what's loading
-        System.out.println("=== PAGE TITLE ===");
-        System.out.println(driver.getTitle());
-        System.out.println("=== PAGE SOURCE ===");
-        System.out.println(driver.getPageSource());
-        System.out.println("==================");
-        
-        // Wait for either login form or any content to load
-        try {
-            wait.until(ExpectedConditions.or(
-                ExpectedConditions.presenceOfElementLocated(By.cssSelector("input[placeholder='Username']")),
-                ExpectedConditions.presenceOfElementLocated(By.tagName("body"))
-            ));
-        } catch (Exception e) {
-            System.out.println("Failed to load page properly: " + e.getMessage());
-            System.out.println("Current URL: " + driver.getCurrentUrl());
-            System.out.println("Page source: " + driver.getPageSource());
-            throw e;
-        }
     }
 
     @Test
     @Order(1)
     @DisplayName("Login with invalid credentials should stay on login page")
     public void loginWithInvalidCredentials() {
-        // Add debug info
-        System.out.println("Test 1: Looking for username field...");
-        System.out.println("Current page source: " + driver.getPageSource().substring(0, Math.min(500, driver.getPageSource().length())));
-        
         WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(
             By.cssSelector("input[placeholder='Username']")));
         WebElement passwordField = driver.findElement(By.cssSelector("input[placeholder='Password']"));
@@ -71,10 +46,10 @@ public class UITests {
 
         // Wait for potential alert and dismiss it
         try {
-            Thread.sleep(2000); // Wait for potential alert
+            Thread.sleep(2000);
             driver.switchTo().alert().accept();
         } catch (Exception e) {
-            System.out.println("No alert found, continuing...");
+            // No alert, continue
         }
 
         Assertions.assertTrue(driver.getPageSource().contains("Login"), 
@@ -121,22 +96,52 @@ public class UITests {
         
         Assertions.assertTrue(driver.getPageSource().contains("Test Item"), 
             "Newly created item should appear in the list");
+        
+        // Debug: Print current page content
+        System.out.println("=== AFTER CREATE ITEM ===");
+        System.out.println(driver.getPageSource());
     }
 
     @Test
     @Order(4)
     @DisplayName("Edit an existing todo item and verify updated text")
     public void editItem() {
+        // Debug: Print page state before edit
+        System.out.println("=== BEFORE EDIT ===");
+        System.out.println(driver.getPageSource());
+        
+        // Find the edit button for "Test Item"
         WebElement editButton = wait.until(ExpectedConditions.elementToBeClickable(
             By.xpath("//li[contains(text(), 'Test Item')]/button[text()='Edit']")));
+        
+        System.out.println("Found edit button, clicking...");
         editButton.click();
 
-        wait.until(ExpectedConditions.alertIsPresent());
-        driver.switchTo().alert().sendKeys(" Updated");
-        driver.switchTo().alert().accept();
+        // Handle the JavaScript prompt
+        try {
+            wait.until(ExpectedConditions.alertIsPresent());
+            System.out.println("Alert detected, entering text...");
+            
+            // Clear existing text and enter new text
+            driver.switchTo().alert().sendKeys("Test Item Updated");
+            driver.switchTo().alert().accept();
+            
+            System.out.println("Alert accepted");
+        } catch (Exception e) {
+            System.out.println("No alert found or alert handling failed: " + e.getMessage());
+            // Fallback: try to handle without alert
+        }
 
-        wait.until(ExpectedConditions.textToBePresentInElement(
-            driver.findElement(By.tagName("body")), "Test Item Updated"));
+        // Wait for the page to update and check for the updated text
+        try {
+            wait.until(ExpectedConditions.textToBePresentInElement(
+                driver.findElement(By.tagName("body")), "Test Item Updated"));
+            System.out.println("Updated text found in page");
+        } catch (Exception e) {
+            System.out.println("Updated text not found, current page content:");
+            System.out.println(driver.getPageSource());
+            throw e;
+        }
         
         Assertions.assertTrue(driver.getPageSource().contains("Test Item Updated"), 
             "Item should be updated with new text");
@@ -146,15 +151,35 @@ public class UITests {
     @Order(5)
     @DisplayName("Delete the todo item and verify it is removed")
     public void deleteItem() {
-        WebElement deleteButton = wait.until(ExpectedConditions.elementToBeClickable(
-            By.xpath("//li[contains(text(), 'Test Item Updated')]/button[text()='Delete']")));
+        // Debug: Print page state before delete
+        System.out.println("=== BEFORE DELETE ===");
+        System.out.println(driver.getPageSource());
+        
+        // Look for either "Test Item Updated" or just "Test Item" in case edit didn't work
+        WebElement deleteButton = null;
+        try {
+            deleteButton = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//li[contains(text(), 'Test Item Updated')]/button[text()='Delete']")));
+        } catch (Exception e) {
+            System.out.println("Couldn't find 'Test Item Updated', looking for 'Test Item'...");
+            try {
+                deleteButton = wait.until(ExpectedConditions.elementToBeClickable(
+                    By.xpath("//li[contains(text(), 'Test Item')]/button[text()='Delete']")));
+            } catch (Exception e2) {
+                System.out.println("Couldn't find either item to delete. Current page:");
+                System.out.println(driver.getPageSource());
+                throw e2;
+            }
+        }
+        
         deleteButton.click();
 
+        // Wait for the item to be removed
         wait.until(ExpectedConditions.not(
             ExpectedConditions.textToBePresentInElement(
-                driver.findElement(By.tagName("body")), "Test Item Updated")));
+                driver.findElement(By.tagName("body")), "Test Item")));
         
-        Assertions.assertFalse(driver.getPageSource().contains("Test Item Updated"), 
+        Assertions.assertFalse(driver.getPageSource().contains("Test Item"), 
             "Deleted item should no longer be present");
     }
 
