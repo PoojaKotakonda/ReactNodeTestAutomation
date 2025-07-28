@@ -9,7 +9,7 @@ public class UITests {
 
     @BeforeAll
     public static void setup() {
-        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver"); // Adjust path
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver"); 
         driver = new ChromeDriver();
         driver.get("http://localhost:3000");
     }
