@@ -13,44 +13,63 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
 
     - name: Setup JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 17
 
-    - name: Install Google Chrome stable via apt
-      run: |
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+    - name: Install Chrome
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: stable
 
-    - name: Install matching ChromeDriver version
+    - name: Install ChromeDriver
+      uses: nanasess/setup-chromedriver@v2
+
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm install
+
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Start Backend Server
+      working-directory: ./backend
       run: |
-        CHROME_VERSION_FULL=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-        echo "Full Chrome version detected: $CHROME_VERSION_FULL"
-        
-        CHROME_VERSION=$(echo $CHROME_VERSION_FULL | grep -oP '^\d+\.\d+')
-        echo "Major.Minor Chrome version: $CHROME_VERSION"
-        
-        CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION || true)
-        
-        if [ -z "$CHROMEDRIVER_VERSION" ]; then
-          echo "Exact ChromeDriver version not found for $CHROME_VERSION, falling back to latest stable."
-          CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-        fi
-        
-        echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
-        wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
-        unzip chromedriver_linux64.zip
-        
-        sudo rm -f /usr/local/bin/chromedriver
-        sudo mv chromedriver /usr/local/bin/
-        sudo chmod +x /usr/local/bin/chromedriver
+        npm start &
+        echo $! > backend.pid
+        sleep 5
+        # Verify backend is running
+        curl -f http://localhost:3001/items || exit 1
+
+    - name: Start Frontend Server
+      working-directory: ./frontend
+      run: |
+        npm start &
+        echo $! > frontend.pid
+        # Wait for frontend to be ready
+        timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
 
     - name: Run UI tests
       working-directory: ./tests/ui
       run: mvn clean test
+
+    - name: Stop servers
+      if: always()
+      run: |
+        if [ -f backend/backend.pid ]; then
+          kill $(cat backend/backend.pid) || true
+        fi
+        if [ -f frontend/frontend.pid ]; then
+          kill $(cat frontend/frontend.pid) || true
+        fi
