@@ -1,0 +1,55 @@
+name: UI Tests
+
+on:
+  push:
+    paths:
+      - 'tests/ui/**'
+  pull_request:
+    paths:
+      - 'tests/ui/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Maven and Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y maven wget unzip
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt install -y ./google-chrome-stable_current_amd64.deb
+        CHROME_VERSION=$(google-chrome --version | cut -d " " -f 3 | cut -d "." -f 1)
+        wget https://chromedriver.storage.googleapis.com/$CHROME_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/bin/chromedriver
+        sudo chmod +x /usr/bin/chromedriver
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Start Frontend and Backend
+      run: |
+        cd backend
+        npm install
+        nohup node index.js &
+        cd ../frontend
+        npm install
+        nohup npm start &
+        sleep 10
+
+    - name: Run UI Tests
+      run: |
+        cd tests/ui
+        mvn test
