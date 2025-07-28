@@ -2,8 +2,8 @@ name: API Tests
 
 on:
   push:
-    paths:
-      - 'tests/api/**'
+    branches:
+      - main 
   pull_request:
     paths:
       - 'tests/api/**'

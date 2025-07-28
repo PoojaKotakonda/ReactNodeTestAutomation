@@ -2,8 +2,8 @@ name: UI Tests
 
 on:
   push:
-    paths:
-      - 'tests/ui/**'
+    branches:
+      - main 
   pull_request:
     paths:
       - 'tests/ui/**'
