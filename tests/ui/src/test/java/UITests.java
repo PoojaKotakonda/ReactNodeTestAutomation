@@ -1,8 +1,6 @@
-
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -11,12 +9,14 @@ public class UITests {
 
     @BeforeAll
     public static void setup() {
-        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver"); // Adjust path if needed
+        System.setProperty("webdriver.chrome.driver", "/usr/bin/chromedriver"); // Adjust path
         driver = new ChromeDriver();
         driver.get("http://localhost:3000");
     }
 
-    @Test @Order(1)
+    @Test
+    @Order(1)
+    @DisplayName("Login with invalid credentials should show login page again")
     public void loginWithInvalidCredentials() {
         driver.findElement(By.cssSelector("input[placeholder='Username']")).sendKeys("wrong");
         driver.findElement(By.cssSelector("input[placeholder='Password']")).sendKeys("wrong");
@@ -24,7 +24,9 @@ public class UITests {
         Assertions.assertTrue(driver.getPageSource().contains("Login"));
     }
 
-    @Test @Order(2)
+    @Test
+    @Order(2)
+    @DisplayName("Login with valid credentials should navigate to Todo List")
     public void loginWithValidCredentials() {
         driver.navigate().refresh();
         driver.findElement(By.cssSelector("input[placeholder='Username']")).sendKeys("test");
@@ -33,15 +35,18 @@ public class UITests {
         Assertions.assertTrue(driver.getPageSource().contains("Todo List"));
     }
 
-    @Test @Order(3)
+    @Test
+    @Order(3)
+    @DisplayName("Create a new todo item and verify it appears in the list")
     public void createNewItem() {
-        WebElement input = driver.findElement(By.cssSelector("input[placeholder='New item']"));
-        input.sendKeys("Test Item");
+        driver.findElement(By.cssSelector("input[placeholder='New item']")).sendKeys("Test Item");
         driver.findElement(By.xpath("//button[text()='Add']")).click();
         Assertions.assertTrue(driver.getPageSource().contains("Test Item"));
     }
 
-    @Test @Order(4)
+    @Test
+    @Order(4)
+    @DisplayName("Edit an existing todo item and verify updated text")
     public void editItem() {
         driver.findElement(By.xpath("//li[contains(text(), 'Test Item')]/button[text()='Edit']")).click();
         driver.switchTo().alert().sendKeys("Updated Item");
@@ -49,7 +54,9 @@ public class UITests {
         Assertions.assertTrue(driver.getPageSource().contains("Updated Item"));
     }
 
-    @Test @Order(5)
+    @Test
+    @Order(5)
+    @DisplayName("Delete the todo item and confirm it no longer appears")
     public void deleteItem() {
         driver.findElement(By.xpath("//li[contains(text(), 'Updated Item')]/button[text()='Delete']")).click();
         Assertions.assertFalse(driver.getPageSource().contains("Updated Item"));

@@ -1,8 +1,6 @@
-
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.*;
-
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
@@ -16,7 +14,9 @@ public class APITests {
         RestAssured.baseURI = "http://localhost:3001";
     }
 
-    @Test @Order(1)
+    @Test
+    @Order(1)
+    @DisplayName("POST /login with valid credentials returns 200 OK")
     public void testLoginValid() {
         given().contentType("application/json")
                 .body("{ \"username\": \"test\", \"password\": \"test123\" }")
@@ -24,7 +24,9 @@ public class APITests {
         .then().statusCode(200);
     }
 
-    @Test @Order(2)
+    @Test
+    @Order(2)
+    @DisplayName("POST /login with invalid credentials returns 401 Unauthorized")
     public void testLoginInvalid() {
         given().contentType("application/json")
                 .body("{ \"username\": \"x\", \"password\": \"x\" }")
@@ -32,7 +34,9 @@ public class APITests {
         .then().statusCode(401);
     }
 
-    @Test @Order(3)
+    @Test
+    @Order(3)
+    @DisplayName("POST /items creates a new item and returns 201 Created")
     public void createItem() {
         Response res = given().contentType("application/json")
                 .body("{ \"name\": \"API Item\" }")
@@ -42,21 +46,29 @@ public class APITests {
         itemId = res.jsonPath().getInt("id");
     }
 
-    @Test @Order(4)
+    @Test
+    @Order(4)
+    @DisplayName("GET /items returns list including the created item")
     public void getItems() {
-        when().get("/items").then().statusCode(200)
-                .body("name", hasItem("API Item"));
+        when().get("/items")
+        .then().statusCode(200)
+        .body("name", hasItem("API Item"));
     }
 
-    @Test @Order(5)
+    @Test
+    @Order(5)
+    @DisplayName("PUT /items/:id updates the item name")
     public void updateItem() {
         given().contentType("application/json")
                 .body("{ \"name\": \"Updated API Item\" }")
         .when().put("/items/" + itemId)
-        .then().statusCode(200).body("name", equalTo("Updated API Item"));
+        .then().statusCode(200)
+        .body("name", equalTo("Updated API Item"));
     }
 
-    @Test @Order(6)
+    @Test
+    @Order(6)
+    @DisplayName("DELETE /items/:id deletes the item successfully")
     public void deleteItem() {
         when().delete("/items/" + itemId)
         .then().statusCode(204);
