@@ -28,12 +28,22 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
-    - name: Install ChromeDriver matching installed Chrome version
+    - name: Install matching ChromeDriver version
       run: |
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-        echo "Chrome version detected: $CHROME_VERSION"
-        CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
-        echo "Matching ChromeDriver version: $CHROMEDRIVER_VERSION"
+        CHROME_VERSION_FULL=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+        echo "Full Chrome version detected: $CHROME_VERSION_FULL"
+        
+        CHROME_VERSION=$(echo $CHROME_VERSION_FULL | grep -oP '^\d+\.\d+')
+        echo "Major.Minor Chrome version: $CHROME_VERSION"
+        
+        CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION || true)
+        
+        if [ -z "$CHROMEDRIVER_VERSION" ]; then
+          echo "Exact ChromeDriver version not found for $CHROME_VERSION, falling back to latest stable."
+          CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+        fi
+        
+        echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
         wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
         unzip chromedriver_linux64.zip
         sudo mv chromedriver /usr/local/bin/
