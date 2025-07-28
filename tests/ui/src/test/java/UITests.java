@@ -11,14 +11,11 @@ public class UITests {
 
     @BeforeAll
     public static void setup() {
-        // Explicitly set chromedriver path
-        System.setProperty("webdriver.chrome.driver", "/usr/local/bin/chromedriver");
-        System.out.println("Using chromedriver from: " + System.getProperty("webdriver.chrome.driver"));
-
+        // Setup Chrome driver with headless mode for CI
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--headless");              // Run Chrome in headless mode
+        options.addArguments("--no-sandbox");            // Bypass OS security model
+        options.addArguments("--disable-dev-shm-usage"); // Overcome limited resource problems
         driver = new ChromeDriver(options);
 
         driver.get("http://localhost:3000");

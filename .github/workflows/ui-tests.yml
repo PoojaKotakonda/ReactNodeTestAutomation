@@ -10,53 +10,47 @@ on:
 jobs:
   ui-tests:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: 17
+    - name: Setup JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 17
 
-      - name: Install Google Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
+    - name: Install Google Chrome stable via apt
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
 
-      - name: Install matching ChromeDriver version
-        run: |
-          CHROME_VERSION_FULL=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          echo "Full Chrome version detected: $CHROME_VERSION_FULL"
+    - name: Install matching ChromeDriver version
+      run: |
+        CHROME_VERSION_FULL=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+        echo "Full Chrome version detected: $CHROME_VERSION_FULL"
+        
+        CHROME_VERSION=$(echo $CHROME_VERSION_FULL | grep -oP '^\d+\.\d+')
+        echo "Major.Minor Chrome version: $CHROME_VERSION"
+        
+        CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION || true)
+        
+        if [ -z "$CHROMEDRIVER_VERSION" ]; then
+          echo "Exact ChromeDriver version not found for $CHROME_VERSION, falling back to latest stable."
+          CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
+        fi
+        
+        echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
+        wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        
+        sudo rm -f /usr/local/bin/chromedriver
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
 
-          CHROME_VERSION=$(echo $CHROME_VERSION_FULL | grep -oP '^\d+\.\d+')
-          echo "Major.Minor Chrome version: $CHROME_VERSION"
-
-          CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION || true)
-
-          if [ -z "$CHROMEDRIVER_VERSION" ]; then
-            echo "Exact ChromeDriver version not found for $CHROME_VERSION, falling back to latest stable."
-            CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-          fi
-
-          echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
-
-          sudo rm -f /usr/local/bin/chromedriver
-          wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-
-          # Confirm installed chromedriver version
-          chromedriver --version
-
-      - name: Build and run UI tests
-        working-directory: ./tests/ui
-        run: mvn clean test
-        env:
-          DISPLAY: ":99"
+    - name: Run UI tests
+      working-directory: ./tests/ui
+      run: mvn clean test
