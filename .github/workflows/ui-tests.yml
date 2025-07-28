@@ -46,6 +46,8 @@ jobs:
         echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
         wget -N https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
         unzip chromedriver_linux64.zip
+        
+        sudo rm -f /usr/local/bin/chromedriver
         sudo mv chromedriver /usr/local/bin/
         sudo chmod +x /usr/local/bin/chromedriver
 
