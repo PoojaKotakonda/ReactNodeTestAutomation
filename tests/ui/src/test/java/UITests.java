@@ -16,24 +16,48 @@ public class UITests {
 
     @BeforeAll
     public static void setup() {
-        // Setup Chrome driver with headless mode for CI
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--disable-gpu");
         options.addArguments("--window-size=1920,1080");
+        options.addArguments("--remote-debugging-port=9222");
         
         driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
         
         driver.get("http://localhost:3000");
+        
+        // Debug: Print page source to understand what's loading
+        System.out.println("=== PAGE TITLE ===");
+        System.out.println(driver.getTitle());
+        System.out.println("=== PAGE SOURCE ===");
+        System.out.println(driver.getPageSource());
+        System.out.println("==================");
+        
+        // Wait for either login form or any content to load
+        try {
+            wait.until(ExpectedConditions.or(
+                ExpectedConditions.presenceOfElementLocated(By.cssSelector("input[placeholder='Username']")),
+                ExpectedConditions.presenceOfElementLocated(By.tagName("body"))
+            ));
+        } catch (Exception e) {
+            System.out.println("Failed to load page properly: " + e.getMessage());
+            System.out.println("Current URL: " + driver.getCurrentUrl());
+            System.out.println("Page source: " + driver.getPageSource());
+            throw e;
+        }
     }
 
     @Test
     @Order(1)
     @DisplayName("Login with invalid credentials should stay on login page")
     public void loginWithInvalidCredentials() {
+        // Add debug info
+        System.out.println("Test 1: Looking for username field...");
+        System.out.println("Current page source: " + driver.getPageSource().substring(0, Math.min(500, driver.getPageSource().length())));
+        
         WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(
             By.cssSelector("input[placeholder='Username']")));
         WebElement passwordField = driver.findElement(By.cssSelector("input[placeholder='Password']"));
@@ -47,10 +71,10 @@ public class UITests {
 
         // Wait for potential alert and dismiss it
         try {
-            Thread.sleep(1000); // Brief wait for alert
+            Thread.sleep(2000); // Wait for potential alert
             driver.switchTo().alert().accept();
         } catch (Exception e) {
-            // Alert might not appear, continue
+            System.out.println("No alert found, continuing...");
         }
 
         Assertions.assertTrue(driver.getPageSource().contains("Login"), 
@@ -107,7 +131,6 @@ public class UITests {
             By.xpath("//li[contains(text(), 'Test Item')]/button[text()='Edit']")));
         editButton.click();
 
-        // Handle the prompt dialog
         wait.until(ExpectedConditions.alertIsPresent());
         driver.switchTo().alert().sendKeys(" Updated");
         driver.switchTo().alert().accept();
@@ -138,6 +161,8 @@ public class UITests {
     @AfterAll
     public static void tearDown() {
         if (driver != null) {
+            System.out.println("=== FINAL PAGE STATE ===");
+            System.out.println(driver.getPageSource());
             driver.quit();
         }
     }
