@@ -80,17 +80,34 @@ jobs:
         curl -v http://localhost:3001/health || echo "Backend health check failed"
         curl -v http://localhost:3000 || echo "Frontend check failed"
 
+    - name: Create screenshots directory
+      run: |
+        mkdir -p tests/ui/target/screenshots
+        echo "Screenshots directory created"
+
     - name: Run UI tests with visual validation
       working-directory: ./tests/ui
-      run: mvn clean test
+      run: |
+        echo "Starting UI tests..."
+        mvn clean test -X
+        echo "UI tests completed"
+
+    - name: List screenshot files
+      run: |
+        echo "Checking for screenshots..."
+        find tests/ui/target -name "*.png" -type f || echo "No PNG files found"
+        ls -la tests/ui/target/screenshots/ || echo "Screenshots directory not found"
 
     - name: Upload screenshots
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-screenshots
-        path: tests/ui/target/screenshots/
+        path: |
+          tests/ui/target/screenshots/
+          tests/ui/target/surefire-reports/
         retention-days: 30
+        if-no-files-found: warn
 
     - name: Upload UI test reports
       uses: actions/upload-artifact@v4
@@ -99,6 +116,7 @@ jobs:
         name: ui-test-reports
         path: tests/ui/target/surefire-reports/
         retention-days: 30
+        if-no-files-found: warn
 
     - name: Stop servers
       if: always()
