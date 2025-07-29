@@ -1,10 +1,10 @@
 const request = require('supertest');
-const app = require('./index');
+const { app, resetState } = require('./index');
 
 describe('Backend API Tests', () => {
   beforeEach(() => {
-    // Reset items array before each test
-    require('./index');
+    // Reset state before each test to ensure clean slate
+    resetState();
   });
 
   describe('POST /login', () => {
@@ -40,9 +40,14 @@ describe('Backend API Tests', () => {
       const response = await request(app).get('/items');
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
+      expect(response.body).toHaveLength(0);
     });
 
     test('should create and retrieve items', async () => {
+      // Verify empty state first
+      const initialResponse = await request(app).get('/items');
+      expect(initialResponse.body).toHaveLength(0);
+
       // Create item
       const createResponse = await request(app)
         .post('/items')
@@ -66,6 +71,10 @@ describe('Backend API Tests', () => {
       
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('Name is required');
+      
+      // Verify no item was created
+      const getResponse = await request(app).get('/items');
+      expect(getResponse.body).toHaveLength(0);
     });
 
     test('should update existing item', async () => {
@@ -75,6 +84,7 @@ describe('Backend API Tests', () => {
         .send({ name: 'Original Item' });
       
       const itemId = createResponse.body.id;
+      expect(itemId).toBe(1);
       
       // Update item
       const updateResponse = await request(app)
@@ -84,6 +94,11 @@ describe('Backend API Tests', () => {
       expect(updateResponse.status).toBe(200);
       expect(updateResponse.body.name).toBe('Updated Item');
       expect(updateResponse.body.id).toBe(itemId);
+      
+      // Verify update persisted
+      const getResponse = await request(app).get('/items');
+      expect(getResponse.body).toHaveLength(1);
+      expect(getResponse.body[0].name).toBe('Updated Item');
     });
 
     test('should return 404 for updating non-existent item', async () => {
@@ -102,16 +117,24 @@ describe('Backend API Tests', () => {
         .send({ name: 'Item to Delete' });
       
       const itemId = createResponse.body.id;
+      expect(itemId).toBe(1);
+      
+      // Verify item exists
+      const beforeDeleteResponse = await request(app).get('/items');
+      expect(beforeDeleteResponse.body).toHaveLength(1);
       
       // Delete item
       const deleteResponse = await request(app)
         .delete(`/items/${itemId}`);
       
       expect(deleteResponse.status).toBe(204);
+      expect(deleteResponse.body).toEqual({});
       
       // Verify item is deleted
-      const getResponse = await request(app).get('/items');
-      expect(getResponse.body).toHaveLength(0);
+      const afterDeleteResponse = await request(app).get('/items');
+      expect(afterDeleteResponse.status).toBe(200);
+      expect(afterDeleteResponse.body).toHaveLength(0);
+      expect(afterDeleteResponse.body).toEqual([]);
     });
 
     test('should return 404 for deleting non-existent item', async () => {
@@ -120,6 +143,37 @@ describe('Backend API Tests', () => {
       
       expect(response.status).toBe(404);
       expect(response.body.message).toBe('Item not found');
+      
+      // Verify items array is still empty
+      const getResponse = await request(app).get('/items');
+      expect(getResponse.body).toHaveLength(0);
+    });
+
+    test('should handle multiple items correctly', async () => {
+      // Create multiple items
+      const item1 = await request(app)
+        .post('/items')
+        .send({ name: 'First Item' });
+      
+      const item2 = await request(app)
+        .post('/items')
+        .send({ name: 'Second Item' });
+      
+      expect(item1.body.id).toBe(1);
+      expect(item2.body.id).toBe(2);
+      
+      // Verify both items exist
+      const getResponse = await request(app).get('/items');
+      expect(getResponse.body).toHaveLength(2);
+      
+      // Delete first item
+      await request(app).delete('/items/1');
+      
+      // Verify only second item remains
+      const afterDeleteResponse = await request(app).get('/items');
+      expect(afterDeleteResponse.body).toHaveLength(1);
+      expect(afterDeleteResponse.body[0].name).toBe('Second Item');
+      expect(afterDeleteResponse.body[0].id).toBe(2);
     });
   });
 
@@ -129,6 +183,7 @@ describe('Backend API Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.status).toBe('OK');
       expect(response.body.timestamp).toBeDefined();
+      expect(new Date(response.body.timestamp)).toBeInstanceOf(Date);
     });
   });
 });

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import "./App.css";
 
@@ -10,46 +9,71 @@ function App() {
   const [newItem, setNewItem] = useState("");
 
   const login = async () => {
-    const res = await fetch("http://localhost:3001/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
-    if (res.ok) setLoggedIn(true);
-    else alert("Login failed");
+    try {
+      const res = await fetch("http://localhost:3001/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        setLoggedIn(true);
+      } else {
+        alert("Login failed");
+      }
+    } catch (error) {
+      alert("Login failed");
+    }
   };
 
   const fetchItems = async () => {
-    const res = await fetch("http://localhost:3001/items");
-    const data = await res.json();
-    setItems(data);
+    try {
+      const res = await fetch("http://localhost:3001/items");
+      const data = await res.json();
+      setItems(data);
+    } catch (error) {
+      console.error("Failed to fetch items:", error);
+    }
   };
 
   const addItem = async () => {
-    await fetch("http://localhost:3001/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newItem })
-    });
-    setNewItem("");
-    fetchItems();
+    if (!newItem.trim()) return;
+    
+    try {
+      await fetch("http://localhost:3001/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newItem })
+      });
+      setNewItem("");
+      fetchItems();
+    } catch (error) {
+      console.error("Failed to add item:", error);
+    }
   };
 
   const editItem = async (id, name) => {
     const newName = prompt("Edit item:", name);
     if (newName) {
-      await fetch(`http://localhost:3001/items/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName })
-      });
-      fetchItems();
+      try {
+        await fetch(`http://localhost:3001/items/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName })
+        });
+        fetchItems();
+      } catch (error) {
+        console.error("Failed to edit item:", error);
+      }
     }
   };
 
   const deleteItem = async (id) => {
-    await fetch(`http://localhost:3001/items/${id}`, { method: "DELETE" });
-    fetchItems();
+    try {
+      await fetch(`http://localhost:3001/items/${id}`, { method: "DELETE" });
+      fetchItems();
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+    }
   };
 
   useEffect(() => {
@@ -61,14 +85,27 @@ function App() {
       {!loggedIn ? (
         <div>
           <h2>Login</h2>
-          <input placeholder="Username" onChange={(e) => setUsername(e.target.value)} />
-          <input placeholder="Password" type="password" onChange={(e) => setPassword(e.target.value)} />
+          <input 
+            placeholder="Username" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)} 
+          />
+          <input 
+            placeholder="Password" 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)} 
+          />
           <button onClick={login}>Login</button>
         </div>
       ) : (
         <div>
           <h2>Todo List</h2>
-          <input value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="New item" />
+          <input 
+            value={newItem} 
+            onChange={(e) => setNewItem(e.target.value)} 
+            placeholder="New item" 
+          />
           <button onClick={addItem}>Add</button>
           <ul>
             {items.map((item) => (

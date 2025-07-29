@@ -32,7 +32,10 @@ jobs:
 
     - name: Run Backend Unit Tests with Coverage
       working-directory: ./backend
-      run: npm run test:coverage
+      run: |
+        echo "Running backend tests..."
+        npm run test:coverage
+        echo "Backend tests completed"
 
     - name: Upload Backend Coverage to Codecov
       uses: codecov/codecov-action@v4

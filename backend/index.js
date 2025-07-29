@@ -10,6 +10,12 @@ app.use(express.json());
 let items = [];
 let currentId = 1;
 
+// Function to reset state for testing
+function resetState() {
+  items = [];
+  currentId = 1;
+}
+
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
   if (username === "test" && password === "test123") {
@@ -66,4 +72,5 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
-module.exports = app;
+// Export both app and reset function for testing
+module.exports = { app, resetState };
