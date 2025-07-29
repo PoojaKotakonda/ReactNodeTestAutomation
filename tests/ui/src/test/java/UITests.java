@@ -1,4 +1,6 @@
-import org.junit.jupiter.a.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -16,6 +18,8 @@ public class UITests {
 
     @BeforeAll
     public static void setup() {
+        System.out.println("=== UI TEST SETUP ===");
+        
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
@@ -25,18 +29,21 @@ public class UITests {
         
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        
+        System.out.println("Navigating to: http://localhost:3000");
         driver.get("http://localhost:3000");
+        
+        System.out.println("=== SETUP COMPLETE ===");
     }
 
     @Test
     @Order(1)
     @DisplayName("Login page visual validation and invalid credentials test")
     public void loginWithInvalidCredentials() {
+        System.out.println("=== TEST 1: Invalid Login ===");
+        
         wait.until(ExpectedConditions.presenceOfElementLocated(
             By.cssSelector("input[placeholder='Username']")));
-        
-        // Take screenshot for visual validation
-        VisualTestHelper.takeScreenshot(driver, "login_page_initial");
         
         WebElement usernameField = driver.findElement(By.cssSelector("input[placeholder='Username']"));
         WebElement passwordField = driver.findElement(By.cssSelector("input[placeholder='Password']"));
@@ -47,7 +54,6 @@ public class UITests {
         passwordField.clear();
         passwordField.sendKeys("wrong");
         
-        VisualTestHelper.takeScreenshot(driver, "login_page_filled_invalid");
         loginButton.click();
 
         // Wait for potential alert and dismiss it
@@ -55,18 +61,21 @@ public class UITests {
             Thread.sleep(2000);
             driver.switchTo().alert().accept();
         } catch (Exception e) {
-            // No alert, continue
+            System.out.println("No alert found");
         }
 
-        VisualTestHelper.takeScreenshot(driver, "login_page_after_invalid_attempt");
         Assertions.assertTrue(driver.getPageSource().contains("Login"), 
             "User should remain on login page after invalid login");
+        
+        System.out.println("=== TEST 1 COMPLETE ===");
     }
 
     @Test
     @Order(2)
     @DisplayName("Login with valid credentials and capture todo page")
     public void loginWithValidCredentials() {
+        System.out.println("=== TEST 2: Valid Login ===");
+        
         driver.navigate().refresh();
         
         WebElement usernameField = wait.until(ExpectedConditions.presenceOfElementLocated(
@@ -79,51 +88,44 @@ public class UITests {
         passwordField.clear();
         passwordField.sendKeys("test123");
         
-        VisualTestHelper.takeScreenshot(driver, "login_page_filled_valid");
         loginButton.click();
 
         wait.until(ExpectedConditions.textToBePresentInElement(
             driver.findElement(By.tagName("body")), "Todo List"));
         
-        // Take screenshot of todo list page
-        VisualTestHelper.takeScreenshot(driver, "todo_list_page_empty");
-        
         Assertions.assertTrue(driver.getPageSource().contains("Todo List"), 
             "User should be on Todo List page after successful login");
+        
+        System.out.println("=== TEST 2 COMPLETE ===");
     }
 
     @Test
     @Order(3)
     @DisplayName("Create item and capture state changes")
     public void createNewItem() {
-        // Before creating item
-        VisualTestHelper.takeScreenshot(driver, "before_create_item");
+        System.out.println("=== TEST 3: Create Item ===");
         
         WebElement newItemField = wait.until(ExpectedConditions.presenceOfElementLocated(
             By.cssSelector("input[placeholder='New item']")));
         WebElement addButton = driver.findElement(By.xpath("//button[text()='Add']"));
 
         newItemField.sendKeys("Test Item");
-        VisualTestHelper.takeScreenshot(driver, "create_item_field_filled");
-        
         addButton.click();
 
         wait.until(ExpectedConditions.textToBePresentInElement(
             driver.findElement(By.tagName("body")), "Test Item"));
         
-        // After creating item
-        VisualTestHelper.takeScreenshot(driver, "after_create_item");
-        
         Assertions.assertTrue(driver.getPageSource().contains("Test Item"), 
             "Newly created item should appear in the list");
+        
+        System.out.println("=== TEST 3 COMPLETE ===");
     }
 
     @Test
     @Order(4)
     @DisplayName("Edit item with visual state tracking")
     public void editItem() {
-        // Before edit
-        VisualTestHelper.takeScreenshot(driver, "before_edit_item");
+        System.out.println("=== TEST 4: Edit Item ===");
         
         WebElement editButton = wait.until(ExpectedConditions.elementToBeClickable(
             By.xpath("//li[contains(text(), 'Test Item')]/button[text()='Edit']")));
@@ -140,19 +142,17 @@ public class UITests {
         wait.until(ExpectedConditions.textToBePresentInElement(
             driver.findElement(By.tagName("body")), "Test Item Updated"));
         
-        // After edit
-        VisualTestHelper.takeScreenshot(driver, "after_edit_item");
-        
         Assertions.assertTrue(driver.getPageSource().contains("Test Item Updated"), 
             "Item should be updated with new text");
+        
+        System.out.println("=== TEST 4 COMPLETE ===");
     }
 
     @Test
     @Order(5)
     @DisplayName("Delete item and verify empty state")
     public void deleteItem() {
-        // Before delete
-        VisualTestHelper.takeScreenshot(driver, "before_delete_item");
+        System.out.println("=== TEST 5: Delete Item ===");
         
         WebElement deleteButton = null;
         try {
@@ -170,19 +170,20 @@ public class UITests {
             ExpectedConditions.textToBePresentInElement(
                 driver.findElement(By.tagName("body")), "Test Item")));
         
-        // After delete - empty state
-        VisualTestHelper.takeScreenshot(driver, "after_delete_empty_state");
-        
         Assertions.assertFalse(driver.getPageSource().contains("Test Item"), 
             "Deleted item should no longer be present");
+        
+        System.out.println("=== TEST 5 COMPLETE ===");
     }
 
     @AfterAll
     public static void tearDown() {
+        System.out.println("=== TEARDOWN ===");
+        
         if (driver != null) {
-            // Final state screenshot
-            VisualTestHelper.takeScreenshot(driver, "final_state");
             driver.quit();
         }
+        
+        System.out.println("=== TEARDOWN COMPLETE ===");
     }
 }
