@@ -35,7 +35,7 @@ jobs:
       run: npm run test:coverage
 
     - name: Upload Backend Coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./backend/coverage/lcov.info
         flags: backend
@@ -57,7 +57,7 @@ jobs:
       run: mvn clean test
 
     - name: Upload API Test Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: api-test-reports

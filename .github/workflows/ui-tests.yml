@@ -46,7 +46,7 @@ jobs:
       run: npm run test:coverage
 
     - name: Upload Frontend Coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./frontend/coverage/lcov.info
         flags: frontend
@@ -85,7 +85,7 @@ jobs:
       run: mvn clean test
 
     - name: Upload screenshots
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-screenshots
@@ -93,7 +93,7 @@ jobs:
         retention-days: 30
 
     - name: Upload UI test reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: ui-test-reports
