@@ -21,6 +21,7 @@ function App() {
         alert("Login failed");
       }
     } catch (error) {
+      console.error("Login error:", error);
       alert("Login failed");
     }
   };
@@ -28,8 +29,10 @@ function App() {
   const fetchItems = async () => {
     try {
       const res = await fetch("http://localhost:3001/items");
-      const data = await res.json();
-      setItems(data);
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data);
+      }
     } catch (error) {
       console.error("Failed to fetch items:", error);
     }
@@ -39,13 +42,15 @@ function App() {
     if (!newItem.trim()) return;
     
     try {
-      await fetch("http://localhost:3001/items", {
+      const res = await fetch("http://localhost:3001/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newItem })
       });
-      setNewItem("");
-      fetchItems();
+      if (res.ok) {
+        setNewItem("");
+        await fetchItems(); // Refresh the list
+      }
     } catch (error) {
       console.error("Failed to add item:", error);
     }
@@ -53,14 +58,16 @@ function App() {
 
   const editItem = async (id, name) => {
     const newName = prompt("Edit item:", name);
-    if (newName) {
+    if (newName && newName.trim()) {
       try {
-        await fetch(`http://localhost:3001/items/${id}`, {
+        const res = await fetch(`http://localhost:3001/items/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: newName })
         });
-        fetchItems();
+        if (res.ok) {
+          await fetchItems(); // Refresh the list
+        }
       } catch (error) {
         console.error("Failed to edit item:", error);
       }
@@ -69,15 +76,35 @@ function App() {
 
   const deleteItem = async (id) => {
     try {
-      await fetch(`http://localhost:3001/items/${id}`, { method: "DELETE" });
-      fetchItems();
+      const res = await fetch(`http://localhost:3001/items/${id}`, { 
+        method: "DELETE" 
+      });
+      if (res.ok) {
+        await fetchItems(); // Refresh the list
+      }
     } catch (error) {
       console.error("Failed to delete item:", error);
     }
   };
 
+  // Handle Enter key press for login
+  const handleLoginKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      login();
+    }
+  };
+
+  // Handle Enter key press for adding items
+  const handleAddItemKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      addItem();
+    }
+  };
+
   useEffect(() => {
-    if (loggedIn) fetchItems();
+    if (loggedIn) {
+      fetchItems();
+    }
   }, [loggedIn]);
 
   return (
@@ -88,13 +115,15 @@ function App() {
           <input 
             placeholder="Username" 
             value={username}
-            onChange={(e) => setUsername(e.target.value)} 
+            onChange={(e) => setUsername(e.target.value)}
+            onKeyPress={handleLoginKeyPress}
           />
           <input 
             placeholder="Password" 
             type="password" 
             value={password}
             onChange={(e) => setPassword(e.target.value)} 
+            onKeyPress={handleLoginKeyPress}
           />
           <button onClick={login}>Login</button>
         </div>
@@ -104,7 +133,8 @@ function App() {
           <input 
             value={newItem} 
             onChange={(e) => setNewItem(e.target.value)} 
-            placeholder="New item" 
+            placeholder="New item"
+            onKeyPress={handleAddItemKeyPress}
           />
           <button onClick={addItem}>Add</button>
           <ul>
