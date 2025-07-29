@@ -2,43 +2,72 @@ name: API Tests
 
 on:
   push:
-    branches:
-      - main 
+    branches: [main]
   pull_request:
-    paths:
-      - 'tests/api/**'
+    paths: ['tests/api/**', 'backend/**']
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
 
     - name: Setup Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Maven
-      run: sudo apt-get install -y maven
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm install
 
-    - name: Install Node.js
-      uses: actions/setup-node@v3
+    - name: Run Backend Unit Tests with Coverage
+      working-directory: ./backend
+      run: npm run test:coverage
+
+    - name: Upload Backend Coverage to Codecov
+      uses: codecov/codecov-action@v3
       with:
-        node-version: '18'
+        file: ./backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
 
     - name: Start Backend Server
+      working-directory: ./backend
       run: |
-        cd backend
-        npm install
         npm start &
-        sleep 5
+        echo $! > ../backend.pid
+        timeout 30 bash -c 'until curl -s http://localhost:3001/health >/dev/null 2>&1; do 
+          echo "Waiting for backend server..."
+          sleep 2
+        done'
+        echo "Backend server is ready"
 
-    - name: Run API Tests
+    - name: Run API Integration Tests
+      working-directory: ./tests/api
+      run: mvn clean test
+
+    - name: Upload API Test Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-test-reports
+        path: tests/api/target/surefire-reports/
+        retention-days: 30
+
+    - name: Stop Backend Server
+      if: always()
       run: |
-        cd tests/api
-        mvn test
+        if [ -f backend.pid ]; then
+          kill $(cat backend.pid) || true
+          rm backend.pid
+        fi

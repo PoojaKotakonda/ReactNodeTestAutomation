@@ -1,8 +1,8 @@
-
 const express = require("express");
 const cors = require("cors");
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +25,9 @@ app.get("/items", (req, res) => {
 
 app.post("/items", (req, res) => {
   const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ message: "Name is required" });
+  }
   const newItem = { id: currentId++, name };
   items.push(newItem);
   res.status(201).json(newItem);
@@ -44,8 +47,23 @@ app.put("/items/:id", (req, res) => {
 
 app.delete("/items/:id", (req, res) => {
   const { id } = req.params;
+  const initialLength = items.length;
   items = items.filter((item) => item.id != id);
-  res.status(204).send();
+  if (items.length === initialLength) {
+    res.status(404).json({ message: "Item not found" });
+  } else {
+    res.status(204).send();
+  }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
+
+// Only start server if not being required as module
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;

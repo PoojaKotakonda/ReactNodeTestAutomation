@@ -2,8 +2,7 @@ name: UI Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -19,7 +18,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # Remove cache since package.json files are in subdirectories
 
     - name: Setup JDK 17
       uses: actions/setup-java@v4
@@ -43,13 +41,23 @@ jobs:
       working-directory: ./frontend
       run: npm install
 
+    - name: Run Frontend Tests with Coverage
+      working-directory: ./frontend
+      run: npm run test:coverage
+
+    - name: Upload Frontend Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
     - name: Start Backend Server
       working-directory: ./backend
       run: |
         npm start &
         echo $! > ../backend.pid
-        # Wait for backend to be ready
-        timeout 30 bash -c 'until curl -s http://localhost:3001/items >/dev/null 2>&1; do 
+        timeout 30 bash -c 'until curl -s http://localhost:3001/health >/dev/null 2>&1; do 
           echo "Waiting for backend server..."
           sleep 2
         done'
@@ -60,16 +68,37 @@ jobs:
       run: |
         npm start &
         echo $! > ../frontend.pid
-        # Wait for frontend to be ready (check for webpack dev server startup)
         timeout 120 bash -c 'until curl -s http://localhost:3000 | grep -q "html\|HTML\|<!DOCTYPE" || curl -s http://localhost:3000 >/dev/null 2>&1; do 
           echo "Waiting for frontend server..."
           sleep 3
         done'
         echo "Frontend server is ready"
 
-    - name: Run UI tests
+    - name: Debug server status
+      run: |
+        echo "Checking server status..."
+        curl -v http://localhost:3001/health || echo "Backend health check failed"
+        curl -v http://localhost:3000 || echo "Frontend check failed"
+
+    - name: Run UI tests with visual validation
       working-directory: ./tests/ui
       run: mvn clean test
+
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-screenshots
+        path: tests/ui/target/screenshots/
+        retention-days: 30
+
+    - name: Upload UI test reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: ui-test-reports
+        path: tests/ui/target/surefire-reports/
+        retention-days: 30
 
     - name: Stop servers
       if: always()
