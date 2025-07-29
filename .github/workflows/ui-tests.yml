@@ -80,42 +80,57 @@ jobs:
         curl -v http://localhost:3001/health || echo "Backend health check failed"
         curl -v http://localhost:3000 || echo "Frontend check failed"
 
-    - name: Create screenshots directory
+    - name: Ensure directories exist
       run: |
         mkdir -p tests/ui/target/screenshots
-        echo "Screenshots directory created"
+        mkdir -p tests/ui/target/surefire-reports
+        echo "Directories created"
+        ls -la tests/ui/target/
 
-    - name: Run UI tests with visual validation
+    - name: Run UI tests
       working-directory: ./tests/ui
       run: |
         echo "Starting UI tests..."
         mvn clean test -X
         echo "UI tests completed"
 
-    - name: List screenshot files
+    - name: List generated files
       run: |
-        echo "Checking for screenshots..."
-        find tests/ui/target -name "*.png" -type f || echo "No PNG files found"
-        ls -la tests/ui/target/screenshots/ || echo "Screenshots directory not found"
+        echo "=== CHECKING GENERATED FILES ==="
+        echo "Screenshots directory:"
+        find tests/ui/target/screenshots -type f -name "*.png" | head -10 || echo "No PNG files found"
+        
+        echo "Surefire reports directory:"
+        find tests/ui/target/surefire-reports -type f | head -10 || echo "No surefire files found"
+        
+        echo "All files in target:"
+        find tests/ui/target -type f | head -20 || echo "No files in target"
 
-    - name: Upload screenshots
+    - name: Upload Screenshots Only
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-screenshots
-        path: |
-          tests/ui/target/screenshots/
-          tests/ui/target/surefire-reports/
+        name: ui-test-screenshots
+        path: tests/ui/target/screenshots/
         retention-days: 30
         if-no-files-found: warn
 
-    - name: Upload UI test reports
+    - name: Upload Test Reports Only
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: ui-test-reports
         path: tests/ui/target/surefire-reports/
         retention-days: 30
+        if-no-files-found: warn
+
+    - name: Upload All Target Contents (Debug)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ui-target-debug
+        path: tests/ui/target/
+        retention-days: 7
         if-no-files-found: warn
 
     - name: Stop servers
